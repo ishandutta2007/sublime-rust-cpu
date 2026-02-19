@@ -25,4 +25,3 @@ cargo run
 ## Status
 
 This project is in its early stages of development.
-# sublime-rust-cpu

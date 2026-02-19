@@ -1,0 +1,10 @@
+[package]
+authors = ["Ishan Dutta <ishandutta2007@gmail.com>"]
+name = "sublime-rust-cpu"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.26.2" # Includes egui
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
