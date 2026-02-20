@@ -308,7 +308,7 @@ impl SublimeRustApp {
     fn render_footer(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let icon = "◧";
+                let icon = if self.sidebar_visible { "[<]" } else { "[>]" };
                 if ui.button(icon).on_hover_text("Toggle Side Bar").clicked() {
                     self.sidebar_visible = !self.sidebar_visible;
                 }
