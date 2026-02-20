@@ -3,6 +3,16 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{Style, ThemeSet};
+use syntect::parsing::SyntaxSet;
+use syntect::util::LinesWithEndings;
+use once_cell::sync::Lazy;
+
+// ── Globals for Syntax Highlighting ─────────────────────────────────────────
+
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(SyntaxSet::load_defaults_newlines);
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(ThemeSet::load_defaults);
 
 // ── App State ─────────────────────────────────────────────────────────────────
 
@@ -166,11 +176,35 @@ impl SublimeRustApp {
             });
         });
     }
+
+    fn render_footer(&mut self, ctx: &egui::Context) {
+        egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Ready");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if let Some(idx) = self.active_tab_index {
+                        if let Some(path) = self.open_tabs.get(idx) {
+                            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                            let syntax = SYNTAX_SET
+                                .find_syntax_by_extension(extension)
+                                .or_else(|| SYNTAX_SET.find_syntax_by_first_line(extension)) // fallback
+                                .map(|s| s.name.as_str())
+                                .unwrap_or("Plain Text");
+                            ui.label(format!("Language: {}", syntax));
+                        }
+                    } else {
+                        ui.label("No file");
+                    }
+                });
+            });
+        });
+    }
 }
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.render_menu_bar(ctx);
+        self.render_footer(ctx);
 
         egui::SidePanel::left("sidebar_panel")
             .resizable(true)
@@ -222,15 +256,8 @@ impl eframe::App for SublimeRustApp {
 
                     if let Some(idx) = tab_to_close {
                         self.open_tabs.remove(idx);
-                        // Safe removal from map requires checking if other tabs use same file? 
-                        // Assuming unique paths in tabs, we can remove content if no other tab has it open.
-                        // But for simplicity here, we just remove it from the list.
-                        // Ideally we should check if we should remove from `tab_contents` too, 
-                        // but keeping it cached is fine for now.
-                        
                         if let Some(active_idx) = self.active_tab_index {
                             if idx == active_idx {
-                                // We closed the active tab
                                 self.active_tab_index = if self.open_tabs.is_empty() {
                                     None
                                 } else if idx >= self.open_tabs.len() {
@@ -239,7 +266,6 @@ impl eframe::App for SublimeRustApp {
                                     Some(idx)
                                 };
                             } else if idx < active_idx {
-                                // We closed a tab before the active one, so shift index left
                                 self.active_tab_index = Some(active_idx - 1);
                             }
                         }
@@ -251,8 +277,8 @@ impl eframe::App for SublimeRustApp {
 
             // ── Editor Pane ──────────────────────────────────────
             if let Some(idx) = self.active_tab_index {
-                if let Some(path) = self.open_tabs.get(idx) {
-                    if let Some(content) = self.tab_contents.get_mut(path) {
+                if let Some(path) = self.open_tabs.get(idx).cloned() {
+                    if let Some(content) = self.tab_contents.get_mut(&path) {
                         egui::ScrollArea::vertical().id_source("editor_scroll").show(ui, |ui| {
                             ui.horizontal_top(|ui| {
                                 let line_count = content.chars().filter(|&c| c == '\n').count() + 1;
@@ -269,6 +295,38 @@ impl eframe::App for SublimeRustApp {
                                     )
                                 );
 
+                                let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                                let syntax = SYNTAX_SET
+                                    .find_syntax_by_extension(extension)
+                                    .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+                                let theme = &THEME_SET.themes["base16-ocean.dark"];
+
+                                let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                                    let mut job = egui::text::LayoutJob::default();
+                                    let mut highlighter = HighlightLines::new(syntax, theme);
+                                    for line in LinesWithEndings::from(string) {
+                                        let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &SYNTAX_SET).unwrap();
+                                        for (style, text) in ranges {
+                                            let color = egui::Color32::from_rgba_unmultiplied(
+                                                style.foreground.r,
+                                                style.foreground.g,
+                                                style.foreground.b,
+                                                style.foreground.a,
+                                            );
+                                            job.append(
+                                                text,
+                                                0.0,
+                                                egui::TextFormat {
+                                                    font_id: egui::TextStyle::Monospace.resolve(ui.style()),
+                                                    color,
+                                                    ..Default::default()
+                                                },
+                                            );
+                                        }
+                                    }
+                                    ui.fonts(|f| f.layout_job(job))
+                                };
+
                                 ui.add(
                                     egui::TextEdit::multiline(content)
                                         .code_editor()
@@ -276,6 +334,7 @@ impl eframe::App for SublimeRustApp {
                                         .desired_width(f32::INFINITY)
                                         .desired_rows(40)
                                         .lock_focus(true)
+                                        .layouter(&mut layouter)
                                 );
                             });
                         });
