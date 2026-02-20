@@ -98,7 +98,10 @@ impl SublimeRustApp {
                             self.render_project_explorer(ui, entry_path);
                         } else {
                             // File entry
-                            if ui.add(egui::Label::new(format!("  {}", file_name)).sense(egui::Sense::click())).clicked() {
+                            let is_dirty = self.dirty_files.contains(&entry_path);
+                            let display_name = if is_dirty { format!("*{}", file_name) } else { file_name.clone() };
+                            
+                            if ui.add(egui::Label::new(format!("  {}", display_name)).sense(egui::Sense::click())).clicked() {
                                 if let Some(pos) = self.open_tabs.iter().position(|p| p == &entry_path) {
                                     self.active_tab_index = Some(pos);
                                 } else {
