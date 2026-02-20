@@ -60,55 +60,38 @@ impl SublimeRustApp {
 
         let is_expanded = self.expanded_dirs.contains(&path);
 
-        // Calculate indentation based on depth could be done, but CollapsingHeader handles this well.
-        // However, to match custom behavior (loading files on click), we implement custom logic.
-        
-        let id = ui.make_persistent_id(&path);
-        
-        egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
-            .show_header(ui, |ui| {
-                if ui.selectable_label(is_expanded, format!("{} {}", if is_expanded { "▾" } else { "▸" }, dir_name)).clicked() {
-                    if is_expanded {
-                        self.expanded_dirs.remove(&path);
-                    } else {
-                        self.expanded_dirs.insert(path.clone());
-                    }
-                }
-            })
-            .body(|ui| {
-                // Only render children if expanded (handled by .body() callback which runs if open)
-                if is_expanded {
-                     // Ensure we track this as expanded in our state too, though the UI state might be enough.
-                     // The previous implementation used a HashSet, so we sync with that.
-                     if let Ok(entries) = std::fs::read_dir(&path) {
-                        let mut sorted_entries: Vec<_> = entries.filter_map(|entry| entry.ok()).collect();
-                        sorted_entries.sort_by(|a, b| {
-                            let a_is_dir = a.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-                            let b_is_dir = b.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-                            match (a_is_dir, b_is_dir) {
-                                (true, false) => std::cmp::Ordering::Less,
-                                (false, true) => std::cmp::Ordering::Greater,
-                                _ => a.file_name().cmp(&b.file_name()),
-                            }
-                        });
+        let response = egui::CollapsingHeader::new(&dir_name)
+            .id_source(&path)
+            .open(Some(is_expanded))
+            .show(ui, |ui| {
+                if let Ok(entries) = std::fs::read_dir(&path) {
+                    let mut sorted_entries: Vec<_> = entries.filter_map(|entry| entry.ok()).collect();
+                    sorted_entries.sort_by(|a, b| {
+                        let a_is_dir = a.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+                        let b_is_dir = b.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+                        match (a_is_dir, b_is_dir) {
+                            (true, false) => std::cmp::Ordering::Less,
+                            (false, true) => std::cmp::Ordering::Greater,
+                            _ => a.file_name().cmp(&b.file_name()),
+                        }
+                    });
 
-                        for entry in sorted_entries {
-                            let entry_path = entry.path();
-                            let file_name = entry.file_name().to_str().unwrap_or("?").to_string();
+                    for entry in sorted_entries {
+                        let entry_path = entry.path();
+                        let file_name = entry.file_name().to_str().unwrap_or("?").to_string();
 
-                            if entry_path.is_dir() {
-                                self.render_project_explorer(ui, entry_path);
-                            } else {
-                                // File entry
-                                if ui.add(egui::Label::new(format!("  {}", file_name)).sense(egui::Sense::click())).clicked() {
-                                    if let Some(pos) = self.open_tabs.iter().position(|p| p == &entry_path) {
-                                        self.active_tab_index = Some(pos);
-                                    } else {
-                                        if let Ok(content) = fs::read_to_string(&entry_path) {
-                                            self.tab_contents.insert(entry_path.clone(), content);
-                                            self.open_tabs.push(entry_path.clone());
-                                            self.active_tab_index = Some(self.open_tabs.len() - 1);
-                                        }
+                        if entry_path.is_dir() {
+                            self.render_project_explorer(ui, entry_path);
+                        } else {
+                            // File entry
+                            if ui.add(egui::Label::new(format!("  {}", file_name)).sense(egui::Sense::click())).clicked() {
+                                if let Some(pos) = self.open_tabs.iter().position(|p| p == &entry_path) {
+                                    self.active_tab_index = Some(pos);
+                                } else {
+                                    if let Ok(content) = fs::read_to_string(&entry_path) {
+                                        self.tab_contents.insert(entry_path.clone(), content);
+                                        self.open_tabs.push(entry_path.clone());
+                                        self.active_tab_index = Some(self.open_tabs.len() - 1);
                                     }
                                 }
                             }
@@ -116,6 +99,14 @@ impl SublimeRustApp {
                     }
                 }
             });
+
+        if response.header_response.clicked() {
+            if is_expanded {
+                self.expanded_dirs.remove(&path);
+            } else {
+                self.expanded_dirs.insert(path.clone());
+            }
+        }
     }
 
     fn render_menu_bar(&mut self, ctx: &egui::Context) {
