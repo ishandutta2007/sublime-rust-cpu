@@ -26,6 +26,7 @@ struct SublimeRustApp {
     tab_contents: HashMap<PathBuf, String>,
     dirty_files: HashSet<PathBuf>,
     cursor_pos: (usize, usize),
+    closing_file_index: Option<usize>,
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
 
@@ -39,6 +40,7 @@ impl Default for SublimeRustApp {
             tab_contents: HashMap::new(),
             dirty_files: HashSet::new(),
             cursor_pos: (1, 1),
+            closing_file_index: None,
         }
     }
 }
@@ -171,6 +173,66 @@ impl SublimeRustApp {
         }
     }
 
+    fn close_tab(&mut self, idx: usize) {
+        let path = self.open_tabs.remove(idx);
+        // We don't necessarily remove from tab_contents to keep cache, 
+        // but we definitely remove from dirty_files as it's no longer "open" in a dirty state we care about for this session
+        self.dirty_files.remove(&path);
+
+        if let Some(active_idx) = self.active_tab_index {
+            if idx == active_idx {
+                self.active_tab_index = if self.open_tabs.is_empty() {
+                    None
+                } else if idx >= self.open_tabs.len() {
+                    Some(self.open_tabs.len() - 1)
+                } else {
+                    Some(idx)
+                };
+            } else if idx < active_idx {
+                self.active_tab_index = Some(active_idx - 1);
+            }
+        }
+    }
+
+    fn render_close_confirmation(&mut self, ctx: &egui::Context) {
+        if let Some(idx) = self.closing_file_index {
+            let mut open = true;
+            let file_name = self.open_tabs[idx].file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("?")
+                .to_string();
+            
+            egui::Window::new("Unsaved Changes")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ctx, |ui| {
+                    ui.label(format!("Do you want to save the changes you made to {}?", file_name));
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            let path_to_save = self.open_tabs[idx].clone();
+                            self.save_file(path_to_save);
+                            self.close_tab(idx);
+                            self.closing_file_index = None;
+                        }
+                        if ui.button("Don't Save").clicked() {
+                            self.close_tab(idx);
+                            self.closing_file_index = None;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.closing_file_index = None;
+                        }
+                    });
+                });
+            
+            if !open {
+                self.closing_file_index = None;
+            }
+        }
+    }
+
     fn render_menu_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -281,6 +343,7 @@ impl eframe::App for SublimeRustApp {
 
         self.render_menu_bar(ctx);
         self.render_footer(ctx);
+        self.render_close_confirmation(ctx);
 
         egui::SidePanel::left("sidebar_panel")
             .resizable(true)
@@ -333,19 +396,11 @@ impl eframe::App for SublimeRustApp {
                     }
 
                     if let Some(idx) = tab_to_close {
-                        self.open_tabs.remove(idx);
-                        if let Some(active_idx) = self.active_tab_index {
-                            if idx == active_idx {
-                                self.active_tab_index = if self.open_tabs.is_empty() {
-                                    None
-                                } else if idx >= self.open_tabs.len() {
-                                    Some(self.open_tabs.len() - 1)
-                                } else {
-                                    Some(idx)
-                                };
-                            } else if idx < active_idx {
-                                self.active_tab_index = Some(active_idx - 1);
-                            }
+                        let is_dirty = self.dirty_files.contains(&self.open_tabs[idx]);
+                        if is_dirty {
+                            self.closing_file_index = Some(idx);
+                        } else {
+                            self.close_tab(idx);
                         }
                     }
                 });
