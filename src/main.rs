@@ -24,6 +24,7 @@ struct SublimeRustApp {
     open_tabs: Vec<PathBuf>,
     active_tab_index: Option<usize>,
     tab_contents: HashMap<PathBuf, String>,
+    cursor_pos: (usize, usize),
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
 
@@ -35,6 +36,7 @@ impl Default for SublimeRustApp {
             open_tabs: Vec::new(),
             active_tab_index: None,
             tab_contents: HashMap::new(),
+            cursor_pos: (1, 1),
         }
     }
 }
@@ -180,7 +182,11 @@ impl SublimeRustApp {
     fn render_footer(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label("Ready");
+                if self.active_tab_index.is_some() {
+                    ui.label(format!("Line {}, Col {}", self.cursor_pos.0, self.cursor_pos.1));
+                } else {
+                    ui.label("Ready");
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if let Some(idx) = self.active_tab_index {
                         if let Some(path) = self.open_tabs.get(idx) {
@@ -327,15 +333,32 @@ impl eframe::App for SublimeRustApp {
                                     ui.fonts(|f| f.layout_job(job))
                                 };
 
-                                ui.add(
-                                    egui::TextEdit::multiline(content)
-                                        .code_editor()
-                                        .font(egui::TextStyle::Monospace) // Use monospace font
-                                        .desired_width(f32::INFINITY)
-                                        .desired_rows(40)
-                                        .lock_focus(true)
-                                        .layouter(&mut layouter)
-                                );
+                                let output = egui::TextEdit::multiline(content)
+                                    .code_editor()
+                                    .font(egui::TextStyle::Monospace) // Use monospace font
+                                    .desired_width(f32::INFINITY)
+                                    .desired_rows(40)
+                                    .lock_focus(true)
+                                    .layouter(&mut layouter)
+                                    .show(ui);
+
+                                if let Some(range) = output.cursor_range {
+                                    let char_idx = range.primary.ccursor.index;
+                                    let mut line = 1;
+                                    let mut col = 1;
+                                    for (i, c) in content.chars().enumerate() {
+                                        if i >= char_idx {
+                                            break;
+                                        }
+                                        if c == '\n' {
+                                            line += 1;
+                                            col = 1;
+                                        } else {
+                                            col += 1;
+                                        }
+                                    }
+                                    self.cursor_pos = (line, col);
+                                }
                             });
                         });
                     }
