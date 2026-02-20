@@ -333,11 +333,12 @@ impl eframe::App for SublimeRustApp {
                                     ui.fonts(|f| f.layout_job(job))
                                 };
 
+                                let min_height = ui.available_height();
                                 let output = egui::TextEdit::multiline(content)
                                     .code_editor()
                                     .font(egui::TextStyle::Monospace) // Use monospace font
                                     .desired_width(f32::INFINITY)
-                                    .desired_rows(40)
+                                    .min_size(egui::vec2(0.0, min_height))
                                     .lock_focus(true)
                                     .layouter(&mut layouter)
                                     .show(ui);
