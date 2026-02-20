@@ -24,6 +24,7 @@ struct SublimeRustApp {
     open_tabs: Vec<PathBuf>,
     active_tab_index: Option<usize>,
     tab_contents: HashMap<PathBuf, String>,
+    dirty_files: HashSet<PathBuf>,
     cursor_pos: (usize, usize),
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
@@ -36,6 +37,7 @@ impl Default for SublimeRustApp {
             open_tabs: Vec::new(),
             active_tab_index: None,
             tab_contents: HashMap::new(),
+            dirty_files: HashSet::new(),
             cursor_pos: (1, 1),
         }
     }
@@ -121,6 +123,51 @@ impl SublimeRustApp {
         }
     }
 
+    fn save_file(&mut self, path: PathBuf) {
+        if let Some(content) = self.tab_contents.get(&path) {
+            if let Ok(_) = fs::write(&path, content) {
+                self.dirty_files.remove(&path);
+            }
+        }
+    }
+
+    fn save_active_file(&mut self) {
+        if let Some(idx) = self.active_tab_index {
+            if let Some(path) = self.open_tabs.get(idx).cloned() {
+                self.save_file(path);
+            }
+        }
+    }
+
+    fn save_as_active_file(&mut self) {
+        if let Some(idx) = self.active_tab_index {
+            if let Some(path) = self.open_tabs.get(idx).cloned() {
+                if let Some(new_path) = rfd::FileDialog::new()
+                    .set_file_name(path.file_name().unwrap().to_str().unwrap())
+                    .save_file() 
+                {
+                    if let Some(content) = self.tab_contents.get(&path).cloned() {
+                        if let Ok(_) = fs::write(&new_path, &content) {
+                            // Update the tab to the new path
+                            self.tab_contents.remove(&path);
+                            self.dirty_files.remove(&path);
+                            
+                            self.tab_contents.insert(new_path.clone(), content);
+                            self.open_tabs[idx] = new_path;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn save_all_files(&mut self) {
+        let dirty: Vec<_> = self.dirty_files.iter().cloned().collect();
+        for path in dirty {
+            self.save_file(path);
+        }
+    }
+
     fn render_menu_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -131,7 +178,19 @@ impl SublimeRustApp {
                     if ui.button("Open Folder...").clicked() { ui.close_menu(); }
                     ui.menu_button("Open Recent", |_| {});
                     ui.separator();
-                    if ui.button("Save (Ctrl+S)").clicked() { ui.close_menu(); }
+                    if ui.button("Save (Ctrl+S)").clicked() {
+                        self.save_active_file();
+                        ui.close_menu();
+                    }
+                    if ui.button("Save As... (Ctrl+Shift+S)").clicked() {
+                        self.save_as_active_file();
+                        ui.close_menu();
+                    }
+                    if ui.button("Save All").clicked() {
+                        self.save_all_files();
+                        ui.close_menu();
+                    }
+                    ui.separator();
                     if ui.button("Exit (Alt+F4)").clicked() { ctx.send_viewport_cmd(egui::ViewportCommand::Close); }
                 });
 
@@ -209,6 +268,14 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Handle shortcuts
+        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::S))) {
+            self.save_active_file();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::S))) {
+            self.save_as_active_file();
+        }
+
         self.render_menu_bar(ctx);
         self.render_footer(ctx);
 
@@ -233,13 +300,15 @@ impl eframe::App for SublimeRustApp {
 
                     for (idx, path) in self.open_tabs.iter().enumerate() {
                         let is_active = Some(idx) == self.active_tab_index;
+                        let is_dirty = self.dirty_files.contains(path);
                         let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?").to_string();
+                        let display_name = if is_dirty { format!("*{}", file_name) } else { file_name };
                         
                         let bg_color = if is_active { egui::Color32::from_rgb(0x23, 0x23, 0x23) } else { egui::Color32::from_rgb(0x18, 0x18, 0x18) };
                         let text_color = if is_active { egui::Color32::from_rgb(0xcc, 0xcc, 0xcc) } else { egui::Color32::from_rgb(0x88, 0x88, 0x88) };
 
                         let response = ui.add(
-                            egui::Button::new(egui::RichText::new(&file_name).color(text_color))
+                            egui::Button::new(egui::RichText::new(&display_name).color(text_color))
                                 .fill(bg_color)
                                 .stroke(egui::Stroke::NONE)
                         );
@@ -342,6 +411,10 @@ impl eframe::App for SublimeRustApp {
                                     .lock_focus(true)
                                     .layouter(&mut layouter)
                                     .show(ui);
+
+                                if output.response.changed() {
+                                    self.dirty_files.insert(path.clone());
+                                }
 
                                 if let Some(range) = output.cursor_range {
                                     let char_idx = range.primary.ccursor.index;
