@@ -254,14 +254,30 @@ impl eframe::App for SublimeRustApp {
                 if let Some(path) = self.open_tabs.get(idx) {
                     if let Some(content) = self.tab_contents.get_mut(path) {
                         egui::ScrollArea::vertical().id_source("editor_scroll").show(ui, |ui| {
-                            ui.add(
-                                egui::TextEdit::multiline(content)
-                                    .code_editor()
-                                    .font(egui::TextStyle::Monospace) // Use monospace font
-                                    .desired_width(f32::INFINITY)
-                                    .desired_rows(40)
-                                    .lock_focus(true)
-                            );
+                            ui.horizontal_top(|ui| {
+                                let line_count = content.chars().filter(|&c| c == '\n').count() + 1;
+                                let mut line_numbers = String::new();
+                                for i in 1..=line_count {
+                                    line_numbers.push_str(&format!("{:>3}\n", i));
+                                }
+
+                                ui.add(
+                                    egui::Label::new(
+                                        egui::RichText::new(line_numbers)
+                                            .font(egui::TextStyle::Monospace.resolve(ui.style()))
+                                            .color(egui::Color32::from_rgb(0x55, 0x55, 0x55))
+                                    )
+                                );
+
+                                ui.add(
+                                    egui::TextEdit::multiline(content)
+                                        .code_editor()
+                                        .font(egui::TextStyle::Monospace) // Use monospace font
+                                        .desired_width(f32::INFINITY)
+                                        .desired_rows(40)
+                                        .lock_focus(true)
+                                );
+                            });
                         });
                     }
                 }
