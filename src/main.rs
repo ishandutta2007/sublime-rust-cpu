@@ -27,6 +27,7 @@ struct SublimeRustApp {
     dirty_files: HashSet<PathBuf>,
     cursor_pos: (usize, usize),
     closing_file_index: Option<usize>,
+    sidebar_visible: bool,
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
 
@@ -41,6 +42,7 @@ impl Default for SublimeRustApp {
             dirty_files: HashSet::new(),
             cursor_pos: (1, 1),
             closing_file_index: None,
+            sidebar_visible: true,
         }
     }
 }
@@ -306,6 +308,12 @@ impl SublimeRustApp {
     fn render_footer(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.horizontal(|ui| {
+                let icon = "◧";
+                if ui.button(icon).on_hover_text("Toggle Side Bar").clicked() {
+                    self.sidebar_visible = !self.sidebar_visible;
+                }
+                ui.separator();
+
                 if self.active_tab_index.is_some() {
                     ui.label(format!("Line {}, Col {}", self.cursor_pos.0, self.cursor_pos.1));
                 } else {
@@ -345,17 +353,19 @@ impl eframe::App for SublimeRustApp {
         self.render_footer(ctx);
         self.render_close_confirmation(ctx);
 
-        egui::SidePanel::left("sidebar_panel")
-            .resizable(true)
-            .default_width(200.0)
-            .width_range(50.0..=600.0)
-            .show(ctx, |ui| {
-                ui.add_space(5.0);
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    let root = self.current_dir.clone();
-                    self.render_project_explorer(ui, root);
+        if self.sidebar_visible {
+            egui::SidePanel::left("sidebar_panel")
+                .resizable(true)
+                .default_width(200.0)
+                .width_range(50.0..=600.0)
+                .show(ctx, |ui| {
+                    ui.add_space(5.0);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        let root = self.current_dir.clone();
+                        self.render_project_explorer(ui, root);
+                    });
                 });
-            });
+        }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // ── Tab Bar ──────────────────────────────────────────
