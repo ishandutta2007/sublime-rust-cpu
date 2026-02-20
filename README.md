@@ -1,4 +1,4 @@
-# Sublime Rust CPU
+# SuRuC (Sublime Rust CPU)
 
 A high-performance, modern text editor inspired by Sublime Text, rewritten from the ground up in Rust using the EGUI framework compatible for CPU (without any GPU). For GPU Version Check: [Sublime Rust GPU](https://github.com/ishandutta2007/sublime-rust-gpu)
 
