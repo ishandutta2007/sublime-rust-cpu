@@ -10,9 +10,11 @@ pub fn render_menu_bar(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 }
                 ui.separator();
                 if ui.button("Open File... (Ctrl+O)").clicked() {
+                    app.open_file();
                     ui.close_menu();
                 }
-                if ui.button("Open Folder...").clicked() {
+                if ui.button("Open Folder... (Ctrl+Shift+O)").clicked() {
+                    app.open_folder();
                     ui.close_menu();
                 }
                 ui.menu_button("Open Recent", |_| {});

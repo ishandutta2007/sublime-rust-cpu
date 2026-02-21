@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 
 pub struct SublimeRustApp {
-    pub current_dir: PathBuf,
+    pub current_dir: Option<PathBuf>, // Changed to Option
     pub expanded_dirs: HashSet<PathBuf>,
     pub open_tabs: Vec<PathBuf>,
     pub active_tab_index: Option<usize>,
@@ -26,7 +26,7 @@ pub struct SublimeRustApp {
 impl Default for SublimeRustApp {
     fn default() -> Self {
         Self {
-            current_dir: env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            current_dir: None, // No default directory(it was env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),)
             expanded_dirs: HashSet::new(),
             open_tabs: Vec::new(),
             active_tab_index: None,
@@ -64,6 +64,35 @@ impl SublimeRustApp {
         cc.egui_ctx.set_visuals(visuals);
 
         Self::default()
+    }
+
+    pub fn open_folder(&mut self) {
+        if let Some(path) = rfd::FileDialog::new().pick_folder() {
+            self.current_dir = Some(path);
+        }
+    }
+
+    pub fn open_file(&mut self) {
+        if let Some(path) = rfd::FileDialog::new().pick_file() {
+            if self.current_dir.is_none() {
+                // If no folder is open, set the parent of the file as the current directory
+                if let Some(parent) = path.parent() {
+                    self.current_dir = Some(parent.to_path_buf());
+                }
+            }
+            if let Ok(content) = fs::read_to_string(&path) {
+                if !self.open_tabs.contains(&path) {
+                    self.tab_contents.insert(path.clone(), content);
+                    self.open_tabs.push(path.clone());
+                    self.active_tab_index = Some(self.open_tabs.len() - 1);
+                } else {
+                    // File is already open, just switch to it
+                    if let Some(pos) = self.open_tabs.iter().position(|p| p == &path) {
+                        self.active_tab_index = Some(pos);
+                    }
+                }
+            }
+        }
     }
 
     pub fn perform_find(&mut self) {
@@ -178,6 +207,7 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Handle shortcuts
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
                 egui::Modifiers::COMMAND,
@@ -203,6 +233,22 @@ impl eframe::App for SublimeRustApp {
             self.find_active = true;
             self.find_just_activated = true;
         }
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND,
+                egui::Key::O,
+            ))
+        }) {
+            self.open_file();
+        }
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Key::O,
+            ))
+        }) {
+            self.open_folder();
+        }
         if self.find_active && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.find_active = false;
         }
@@ -212,21 +258,28 @@ impl eframe::App for SublimeRustApp {
         ui::render_close_confirmation(self, ctx);
 
         if self.sidebar_visible {
-            egui::SidePanel::left("sidebar_panel")
-                .resizable(true)
-                .default_width(200.0)
-                .width_range(50.0..=600.0)
-                .show(ctx, |ui| {
-                    ui.add_space(5.0);
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        let root = self.current_dir.clone();
-                        ui::render_project_explorer(self, ui, root);
+            if let Some(root) = self.current_dir.clone() {
+                egui::SidePanel::left("sidebar_panel")
+                    .resizable(true)
+                    .default_width(200.0)
+                    .width_range(50.0..=600.0)
+                    .show(ctx, |ui| {
+                        ui.add_space(5.0);
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui::render_project_explorer(self, ui, root);
+                        });
                     });
-                });
+            }
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui::render_editor_pane(self, ui);
+            if self.current_dir.is_none() {
+                ui.centered_and_justified(|ui| {
+                    ui.label("Open a file or folder to start.");
+                });
+            } else {
+                ui::render_editor_pane(self, ui);
+            }
         });
     }
 }
