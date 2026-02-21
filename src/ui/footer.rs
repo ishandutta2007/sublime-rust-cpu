@@ -78,6 +78,15 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
 
                 if app.find_active {
                     // let find_id = ui.make_persistent_id("find_input");
+                    if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        if !app.find_matches.is_empty() {
+                            let next_idx = (app.current_match_index.unwrap_or(0) + 1) % app.find_matches.len();
+                            app.current_match_index = Some(next_idx);
+                            app.move_to_match(ctx);
+                        }
+                    }
+                    if ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter)) {
+                    }
                     if ui.button("Find Next").clicked() {
                         if !app.find_matches.is_empty() {
                             let next_idx =
