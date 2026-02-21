@@ -1,7 +1,7 @@
-use eframe::egui;
-use std::path::PathBuf;
-use std::fs;
 use crate::app::SublimeRustApp;
+use eframe::egui;
+use std::fs;
+use std::path::PathBuf;
 
 pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path: PathBuf) {
     let dir_name = path
@@ -36,9 +36,19 @@ pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path
                     } else {
                         // File entry
                         let is_dirty = app.dirty_files.contains(&entry_path);
-                        let display_name = if is_dirty { format!("*{}", file_name) } else { file_name.clone() };
-                        
-                        if ui.add(egui::Label::new(format!("  {}", display_name)).sense(egui::Sense::click())).clicked() {
+                        let display_name = if is_dirty {
+                            format!("*{}", file_name)
+                        } else {
+                            file_name.clone()
+                        };
+
+                        if ui
+                            .add(
+                                egui::Label::new(format!("  {}", display_name))
+                                    .sense(egui::Sense::click()),
+                            )
+                            .clicked()
+                        {
                             if let Some(pos) = app.open_tabs.iter().position(|p| p == &entry_path) {
                                 app.active_tab_index = Some(pos);
                             } else {

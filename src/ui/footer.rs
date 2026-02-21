@@ -1,6 +1,6 @@
-use eframe::egui;
 use crate::app::SublimeRustApp;
 use crate::syntax::SYNTAX_SET;
+use eframe::egui;
 
 pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
     egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
@@ -15,8 +15,12 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             if app.find_active {
                 ui.label("Find:");
                 let find_id = ui.make_persistent_id("find_input");
-                let response = ui.add(egui::TextEdit::singleline(&mut app.find_query).id(find_id).desired_width(150.0));
-                
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut app.find_query)
+                        .id(find_id)
+                        .desired_width(150.0),
+                );
+
                 if app.find_just_activated {
                     ui.ctx().memory_mut(|mem| mem.request_focus(find_id));
                     app.find_just_activated = false;
@@ -33,7 +37,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 //         app.move_to_match(ctx);
                 //     }
                 // }
-                
+
                 if !app.find_matches.is_empty() {
                     let curr = app.current_match_index.unwrap_or(0) + 1;
                     ui.label(format!("{} of {} matches", curr, app.find_matches.len()));
@@ -46,7 +50,10 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 }
             } else {
                 if app.active_tab_index.is_some() {
-                    ui.label(format!("Line {}, Col {}", app.cursor_pos.0, app.cursor_pos.1));
+                    ui.label(format!(
+                        "Line {}, Col {}",
+                        app.cursor_pos.0, app.cursor_pos.1
+                    ));
                 } else {
                     ui.label("Ready");
                 }
@@ -73,7 +80,8 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     // let find_id = ui.make_persistent_id("find_input");
                     if ui.button("Find Next").clicked() {
                         if !app.find_matches.is_empty() {
-                            let next_idx = (app.current_match_index.unwrap_or(0) + 1) % app.find_matches.len();
+                            let next_idx =
+                                (app.current_match_index.unwrap_or(0) + 1) % app.find_matches.len();
                             app.current_match_index = Some(next_idx);
                             app.move_to_match(ctx);
                             // ctx.memory_mut(|mem| mem.request_focus(find_id));

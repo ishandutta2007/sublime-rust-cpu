@@ -1,9 +1,9 @@
+use crate::ui;
 use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use crate::ui;
 
 pub struct SublimeRustApp {
     pub current_dir: PathBuf,
@@ -50,14 +50,16 @@ impl SublimeRustApp {
         let mut visuals = egui::Visuals::dark();
         visuals.window_fill = egui::Color32::from_rgb(0x23, 0x23, 0x23);
         visuals.panel_fill = egui::Color32::from_rgb(0x1e, 0x1e, 0x1e);
-        
+
         visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(0x1e, 0x1e, 0x1e);
         visuals.widgets.inactive.bg_fill = egui::Color32::TRANSPARENT;
         visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(0x3e, 0x3e, 0x3e);
         visuals.widgets.active.bg_fill = egui::Color32::from_rgb(0x2d, 0x2d, 0x2d);
-        
-        visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(0xcc, 0xcc, 0xcc));
-        visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(0xcc, 0xcc, 0xcc));
+
+        visuals.widgets.noninteractive.fg_stroke =
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(0xcc, 0xcc, 0xcc));
+        visuals.widgets.inactive.fg_stroke =
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(0xcc, 0xcc, 0xcc));
 
         cc.egui_ctx.set_visuals(visuals);
 
@@ -74,13 +76,14 @@ impl SublimeRustApp {
         if let Some(idx) = self.active_tab_index {
             if let Some(path) = self.open_tabs.get(idx) {
                 if let Some(content) = self.tab_contents.get(path) {
-                    self.find_matches = content.match_indices(&self.find_query)
-                        .map(|(byte_offset, _)| {
-                            content[..byte_offset].chars().count()
-                        })
+                    self.find_matches = content
+                        .match_indices(&self.find_query)
+                        .map(|(byte_offset, _)| content[..byte_offset].chars().count())
                         .collect();
                     if !self.find_matches.is_empty() {
-                        if self.current_match_index.is_none() || self.current_match_index.unwrap() >= self.find_matches.len() {
+                        if self.current_match_index.is_none()
+                            || self.current_match_index.unwrap() >= self.find_matches.len()
+                        {
                             self.current_match_index = Some(0);
                         }
                     } else {
@@ -97,8 +100,11 @@ impl SublimeRustApp {
                 let editor_id = egui::Id::new("main_editor");
                 if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, editor_id) {
                     let start = egui::text::CCursor::new(*char_offset);
-                    let end = egui::text::CCursor::new(*char_offset + self.find_query.chars().count());
-                    state.cursor.set_char_range(Some(egui::text::CCursorRange::two(start, end)));
+                    let end =
+                        egui::text::CCursor::new(*char_offset + self.find_query.chars().count());
+                    state
+                        .cursor
+                        .set_char_range(Some(egui::text::CCursorRange::two(start, end)));
                     state.store(ctx, editor_id);
                     ctx.memory_mut(|mem| mem.request_focus(editor_id));
                     self.find_scroll_requested = true;
@@ -128,7 +134,7 @@ impl SublimeRustApp {
             if let Some(path) = self.open_tabs.get(idx).cloned() {
                 if let Some(new_path) = rfd::FileDialog::new()
                     .set_file_name(path.file_name().unwrap().to_str().unwrap())
-                    .save_file() 
+                    .save_file()
                 {
                     if let Some(content) = self.tab_contents.get(&path).cloned() {
                         if let Ok(_) = fs::write(&new_path, &content) {
@@ -172,13 +178,28 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::S))) {
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND,
+                egui::Key::S,
+            ))
+        }) {
             self.save_active_file();
         }
-        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::S))) {
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Key::S,
+            ))
+        }) {
             self.save_as_active_file();
         }
-        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F))) {
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND,
+                egui::Key::F,
+            ))
+        }) {
             self.find_active = true;
             self.find_just_activated = true;
         }

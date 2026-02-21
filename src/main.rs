@@ -1,6 +1,6 @@
 mod app;
-mod ui;
 mod syntax;
+mod ui;
 
 use app::SublimeRustApp;
 use eframe::egui;
