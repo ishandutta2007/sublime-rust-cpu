@@ -32,6 +32,7 @@ struct SublimeRustApp {
     find_matches: Vec<usize>,
     current_match_index: Option<usize>,
     find_active: bool,
+    find_just_activated: bool,
     find_scroll_requested: bool,
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
@@ -52,6 +53,7 @@ impl Default for SublimeRustApp {
             find_matches: Vec::new(),
             current_match_index: None,
             find_active: false,
+            find_just_activated: false,
             find_scroll_requested: false,
         }
     }
@@ -326,6 +328,7 @@ impl SublimeRustApp {
                 ui.menu_button("Find", |ui| {
                     if ui.button("Find... (Ctrl+F)").clicked() {
                         self.find_active = true;
+                        self.find_just_activated = true;
                         ui.close_menu();
                     }
                 });
@@ -370,12 +373,16 @@ impl SublimeRustApp {
 
                     if self.find_active {
                         ui.label("Find:");
-                        let response = ui.add(egui::TextEdit::singleline(&mut self.find_query).desired_width(150.0));
+                        let find_id = ui.make_persistent_id("find_input");
+                        let response = ui.add(egui::TextEdit::singleline(&mut self.find_query).id(find_id).desired_width(150.0));
+                        
+                        if self.find_just_activated {
+                            ui.ctx().memory_mut(|mem| mem.request_focus(find_id));
+                            self.find_just_activated = false;
+                        }
+
                         if response.changed() {
                             self.perform_find();
-                        }
-                        if response.lost_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                            // Focus back to editor or find next? Usually find next.
                         }
                         
                         if !self.find_matches.is_empty() {
@@ -383,6 +390,10 @@ impl SublimeRustApp {
                             ui.label(format!("{} of {} matches", curr, self.find_matches.len()));
                         } else if !self.find_query.is_empty() {
                             ui.label("No matches");
+                        }
+
+                        if ui.button("x").on_hover_text("Close Find").clicked() {
+                            self.find_active = false;
                         }
                     } else {
                         if self.active_tab_index.is_some() {
@@ -447,6 +458,10 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F))) {
             self.find_active = true;
+            self.find_just_activated = true;
+        }
+        if self.find_active && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.find_active = false;
         }
 
         self.render_menu_bar(ctx);
