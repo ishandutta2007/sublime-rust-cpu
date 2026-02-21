@@ -81,7 +81,7 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
     if let Some(idx) = app.active_tab_index {
         if let Some(path) = app.open_tabs.get(idx).cloned() {
             if let Some(content) = app.tab_contents.get_mut(&path) {
-                egui::ScrollArea::vertical()
+                egui::ScrollArea::both() // Changed to both() for horizontal scrolling
                     .id_source("editor_scroll")
                     .show(ui, |ui| {
                         ui.horizontal_top(|ui| {
@@ -105,6 +105,11 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
 
                             let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
                                 let mut job = egui::text::LayoutJob::default();
+                                job.wrap.break_anywhere = false; // Disable wrapping
+                                job.wrap.max_width = f32::INFINITY;
+                                // job.wrap.overflow_gaps = true; // No longer needed
+                                // job.wrap.word_wrap = false; // No longer needed
+
                                 let mut highlighter = HighlightLines::new(syntax, theme);
                                 for line in LinesWithEndings::from(string) {
                                     let ranges: Vec<(Style, &str)> =
@@ -136,7 +141,7 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
                                 .id(egui::Id::new("main_editor"))
                                 .code_editor()
                                 .font(egui::TextStyle::Monospace) // Use monospace font
-                                .desired_width(f32::INFINITY)
+                                .desired_width(f32::INFINITY) // Let it be as wide as content
                                 .min_size(egui::vec2(0.0, min_height))
                                 .lock_focus(true)
                                 .layouter(&mut layouter)
