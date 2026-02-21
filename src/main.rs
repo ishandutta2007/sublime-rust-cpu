@@ -28,6 +28,10 @@ struct SublimeRustApp {
     cursor_pos: (usize, usize),
     closing_file_index: Option<usize>,
     sidebar_visible: bool,
+    find_query: String,
+    find_matches: Vec<usize>,
+    current_match_index: Option<usize>,
+    find_active: bool,
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
 
@@ -43,6 +47,10 @@ impl Default for SublimeRustApp {
             cursor_pos: (1, 1),
             closing_file_index: None,
             sidebar_visible: true,
+            find_query: String::new(),
+            find_matches: Vec::new(),
+            current_match_index: None,
+            find_active: false,
         }
     }
 }
@@ -70,6 +78,42 @@ impl SublimeRustApp {
     }
 
     /// Recursively renders the project explorer tree.
+    fn perform_find(&mut self) {
+        self.find_matches.clear();
+        if self.find_query.is_empty() {
+            self.current_match_index = None;
+            return;
+        }
+
+        if let Some(idx) = self.active_tab_index {
+            if let Some(path) = self.open_tabs.get(idx) {
+                if let Some(content) = self.tab_contents.get(path) {
+                    self.find_matches = content.match_indices(&self.find_query).map(|(i, _)| i).collect();
+                    if !self.find_matches.is_empty() {
+                        if self.current_match_index.is_none() || self.current_match_index.unwrap() >= self.find_matches.len() {
+                            self.current_match_index = Some(0);
+                        }
+                    } else {
+                        self.current_match_index = None;
+                    }
+                }
+            }
+        }
+    }
+
+    fn move_to_match(&mut self, ctx: &egui::Context) {
+        if let Some(match_idx) = self.current_match_index {
+            if let Some(byte_offset) = self.find_matches.get(match_idx) {
+                let editor_id = egui::Id::new("main_editor");
+                if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, editor_id) {
+                    let ccursor = egui::text::CCursor::new(*byte_offset);
+                    state.cursor.set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
+                    state.store(ctx, editor_id);
+                }
+            }
+        }
+    }
+
     fn render_project_explorer(&mut self, ui: &mut egui::Ui, path: PathBuf) {
         let dir_name = path
             .file_name()
@@ -275,7 +319,10 @@ impl SublimeRustApp {
                 });
 
                 ui.menu_button("Find", |ui| {
-                    if ui.button("Find... (Ctrl+F)").clicked() { ui.close_menu(); }
+                    if ui.button("Find... (Ctrl+F)").clicked() {
+                        self.find_active = true;
+                        ui.close_menu();
+                    }
                 });
 
                 ui.menu_button("View", |ui| {
@@ -307,34 +354,79 @@ impl SublimeRustApp {
 
     fn render_footer(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let icon = if self.sidebar_visible { "[<]" } else { "[>]" };
-                if ui.button(icon).on_hover_text("Toggle Side Bar").clicked() {
-                    self.sidebar_visible = !self.sidebar_visible;
-                }
-                ui.separator();
+            ui.add_space(3.0);
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    let icon = if self.sidebar_visible { "[<]" } else { "[>]" };
+                    if ui.button(icon).on_hover_text("Toggle Side Bar").clicked() {
+                        self.sidebar_visible = !self.sidebar_visible;
+                    }
+                    ui.separator();
 
-                if self.active_tab_index.is_some() {
-                    ui.label(format!("Line {}, Col {}", self.cursor_pos.0, self.cursor_pos.1));
-                } else {
-                    ui.label("Ready");
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if let Some(idx) = self.active_tab_index {
-                        if let Some(path) = self.open_tabs.get(idx) {
-                            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                            let syntax = SYNTAX_SET
-                                .find_syntax_by_extension(extension)
-                                .or_else(|| SYNTAX_SET.find_syntax_by_first_line(extension)) // fallback
-                                .map(|s| s.name.as_str())
-                                .unwrap_or("Plain Text");
-                            ui.label(format!("Language: {}", syntax));
+                    if self.find_active {
+                        ui.label("Find:");
+                        let response = ui.add(egui::TextEdit::singleline(&mut self.find_query).desired_width(150.0));
+                        if response.changed() {
+                            self.perform_find();
+                        }
+                        if response.lost_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                            // Focus back to editor or find next? Usually find next.
+                        }
+                        
+                        if !self.find_matches.is_empty() {
+                            let curr = self.current_match_index.unwrap_or(0) + 1;
+                            ui.label(format!("{} of {} matches", curr, self.find_matches.len()));
+                        } else if !self.find_query.is_empty() {
+                            ui.label("No matches");
                         }
                     } else {
-                        ui.label("No file");
+                        if self.active_tab_index.is_some() {
+                            ui.label(format!("Line {}, Col {}", self.cursor_pos.0, self.cursor_pos.1));
+                        } else {
+                            ui.label("Ready");
+                        }
                     }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if let Some(idx) = self.active_tab_index {
+                            if let Some(path) = self.open_tabs.get(idx) {
+                                let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                                let syntax = SYNTAX_SET
+                                    .find_syntax_by_extension(extension)
+                                    .or_else(|| SYNTAX_SET.find_syntax_by_first_line(extension)) // fallback
+                                    .map(|s| s.name.as_str())
+                                    .unwrap_or("Plain Text");
+                                ui.label(format!("Language: {}", syntax));
+                            }
+                        } else {
+                            ui.label("No file");
+                        }
+
+                        if self.find_active {
+                            if ui.button("Find Next").clicked() {
+                                if !self.find_matches.is_empty() {
+                                    let next_idx = (self.current_match_index.unwrap_or(0) + 1) % self.find_matches.len();
+                                    self.current_match_index = Some(next_idx);
+                                    self.move_to_match(ctx);
+                                }
+                            }
+                            if ui.button("Find Prev").clicked() {
+                                if !self.find_matches.is_empty() {
+                                    let prev_idx = if self.current_match_index.unwrap_or(0) == 0 {
+                                        self.find_matches.len() - 1
+                                    } else {
+                                        self.current_match_index.unwrap() - 1
+                                    };
+                                    self.current_match_index = Some(prev_idx);
+                                    self.move_to_match(ctx);
+                                }
+                            }
+                            ui.separator();
+                        }
+                    });
                 });
             });
+            ui.add_space(3.0);
         });
     }
 }
@@ -347,6 +439,9 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::S))) {
             self.save_as_active_file();
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F))) {
+            self.find_active = true;
         }
 
         self.render_menu_bar(ctx);
@@ -472,6 +567,7 @@ impl eframe::App for SublimeRustApp {
 
                                 let min_height = ui.available_height();
                                 let output = egui::TextEdit::multiline(content)
+                                    .id(egui::Id::new("main_editor"))
                                     .code_editor()
                                     .font(egui::TextStyle::Monospace) // Use monospace font
                                     .desired_width(f32::INFINITY)
