@@ -32,6 +32,7 @@ struct SublimeRustApp {
     find_matches: Vec<usize>,
     current_match_index: Option<usize>,
     find_active: bool,
+    find_scroll_requested: bool,
     // Sidebar width is handled by egui::SidePanel state implicitly
 }
 
@@ -51,6 +52,7 @@ impl Default for SublimeRustApp {
             find_matches: Vec::new(),
             current_match_index: None,
             find_active: false,
+            find_scroll_requested: false,
         }
     }
 }
@@ -106,9 +108,12 @@ impl SublimeRustApp {
             if let Some(byte_offset) = self.find_matches.get(match_idx) {
                 let editor_id = egui::Id::new("main_editor");
                 if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, editor_id) {
-                    let ccursor = egui::text::CCursor::new(*byte_offset);
-                    state.cursor.set_char_range(Some(egui::text::CCursorRange::one(ccursor)));
+                    let start = egui::text::CCursor::new(*byte_offset);
+                    let end = egui::text::CCursor::new(*byte_offset + self.find_query.len());
+                    state.cursor.set_char_range(Some(egui::text::CCursorRange::two(start, end)));
                     state.store(ctx, editor_id);
+                    ctx.memory_mut(|mem| mem.request_focus(editor_id));
+                    self.find_scroll_requested = true;
                 }
             }
         }
@@ -578,6 +583,14 @@ impl eframe::App for SublimeRustApp {
 
                                 if output.response.changed() {
                                     self.dirty_files.insert(path.clone());
+                                }
+
+                                if self.find_scroll_requested {
+                                    if let Some(range) = output.cursor_range {
+                                        let rect = output.galley.pos_from_cursor(&range.primary);
+                                        ui.scroll_to_rect(rect.translate(output.galley_pos.to_vec2()), Some(egui::Align::Center));
+                                        self.find_scroll_requested = false;
+                                    }
                                 }
 
                                 if let Some(range) = output.cursor_range {
