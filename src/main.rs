@@ -92,7 +92,11 @@ impl SublimeRustApp {
         if let Some(idx) = self.active_tab_index {
             if let Some(path) = self.open_tabs.get(idx) {
                 if let Some(content) = self.tab_contents.get(path) {
-                    self.find_matches = content.match_indices(&self.find_query).map(|(i, _)| i).collect();
+                    self.find_matches = content.match_indices(&self.find_query)
+                        .map(|(byte_offset, _)| {
+                            content[..byte_offset].chars().count()
+                        })
+                        .collect();
                     if !self.find_matches.is_empty() {
                         if self.current_match_index.is_none() || self.current_match_index.unwrap() >= self.find_matches.len() {
                             self.current_match_index = Some(0);
@@ -107,11 +111,11 @@ impl SublimeRustApp {
 
     fn move_to_match(&mut self, ctx: &egui::Context) {
         if let Some(match_idx) = self.current_match_index {
-            if let Some(byte_offset) = self.find_matches.get(match_idx) {
+            if let Some(char_offset) = self.find_matches.get(match_idx) {
                 let editor_id = egui::Id::new("main_editor");
                 if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, editor_id) {
-                    let start = egui::text::CCursor::new(*byte_offset);
-                    let end = egui::text::CCursor::new(*byte_offset + self.find_query.len());
+                    let start = egui::text::CCursor::new(*char_offset);
+                    let end = egui::text::CCursor::new(*char_offset + self.find_query.chars().count());
                     state.cursor.set_char_range(Some(egui::text::CCursorRange::two(start, end)));
                     state.store(ctx, editor_id);
                     ctx.memory_mut(|mem| mem.request_focus(editor_id));
