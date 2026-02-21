@@ -7,7 +7,9 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
         ui.add_space(3.0);
         ui.horizontal(|ui| {
             let icon = if app.sidebar_visible { "[<]" } else { "[>]" };
-            if ui.button(icon).on_hover_text("Toggle Side Bar").clicked() {
+            let response = ui.button(icon);
+            let icon_button_width = response.rect.width();
+            if response.on_hover_text("Toggle Side Bar").clicked() {
                 app.sidebar_visible = !app.sidebar_visible;
             }
             ui.separator();
@@ -15,10 +17,11 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             if app.find_active {
                 ui.label("Find:");
                 let find_id = ui.make_persistent_id("find_input");
+                let remaining_width = ui.available_width() - icon_button_width * 9.0;
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut app.find_query)
                         .id(find_id)
-                        .desired_width(150.0),
+                        .desired_width(remaining_width),
                 );
 
                 if app.find_just_activated {
