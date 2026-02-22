@@ -44,14 +44,25 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.vertical(|ui| {
-                        if ui.button(" Find ").clicked() {
-                            app.perform_find_in_files();
-                        }
-                        if ui.button("Replace").clicked() {
-                            app.perform_replace_in_files();
-                        }
-                        ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            if ui.button(" Find ").clicked() {
+                                app.perform_find_in_files();
+                            }
+                            if ui.button("Replace").clicked() {
+                                app.perform_replace_in_files();
+                            }
+                        });
+
+                        ui.vertical(|ui| {
+                            if ui.button("x").on_hover_text("Close Find").clicked() {
+                                app.find_active = false;
+                            }
+                            if ui.button("g").on_hover_text("Respect .gitignore").clicked() {
+                                app.find_in_files_respect_gitignore = !app.find_in_files_respect_gitignore;
+                            }
+                            // ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
+                        });
                     });
                 });
             } else if app.find_active {

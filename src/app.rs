@@ -379,6 +379,9 @@ impl eframe::App for SublimeRustApp {
         }) {
             self.open_folder();
         }
+        if self.find_in_files_active && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.find_in_files_active = false;
+        }
         if self.find_active && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.find_active = false;
         }
