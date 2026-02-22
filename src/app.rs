@@ -314,6 +314,16 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Debug: Print all key presses
+        ctx.input(|i| {
+            for event in &i.events {
+                if let egui::Event::Key { key, pressed, modifiers, .. } = event {
+                    if *pressed {
+                        // println!("Key pressed: {:?}, Modifiers: {:?}", key, modifiers);
+                    }
+                }
+            }
+        });
         // Handle shortcuts
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
@@ -333,25 +343,25 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Key::F,
+            ))
+        }) {
+            self.find_in_files_active = true;// !self.find_in_files_active;
+            if self.find_in_files_active {
+                if let Some(dir) = &self.current_dir {
+                    self.find_in_files_where_query = dir.to_str().unwrap_or("").to_string();
+                }
+            }
+        }
+        else if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
                 egui::Modifiers::CTRL,
                 egui::Key::F,
             ))
         }) {
             self.find_active = true;
             self.find_just_activated = true;
-        }
-        if ctx.input_mut(|i| {
-            i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
-                egui::Key::F,
-            ))
-        }) {
-            self.find_in_files_active = !self.find_in_files_active;
-            if self.find_in_files_active {
-                if let Some(dir) = &self.current_dir {
-                    self.find_in_files_where_query = dir.to_str().unwrap_or("").to_string();
-                }
-            }
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
