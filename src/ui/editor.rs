@@ -80,7 +80,26 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
     // ── Editor Pane ──────────────────────────────────────
     if let Some(idx) = app.active_tab_index {
         if let Some(path) = app.open_tabs.get(idx).cloned() {
-            if let Some(content) = app.tab_contents.get_mut(&path) {
+            if path.to_str().unwrap_or("").starts_with("find://") {
+                egui::ScrollArea::both()
+                    .id_source("find_results_scroll")
+                    .show(ui, |ui| {
+                        let title = path.to_str().unwrap_or("").replace("find://", "");
+                        ui.label(
+                            egui::RichText::new(title)
+                                .font(egui::TextStyle::Monospace.resolve(ui.style()))
+                                .strong(),
+                        );
+                        ui.separator();
+                        if let Some(results) = &app.find_in_files_results {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut results.clone())
+                                    .font(egui::TextStyle::Monospace)
+                                    .desired_width(f32::INFINITY),
+                            );
+                        }
+                    });
+            } else if let Some(content) = app.tab_contents.get_mut(&path) {
                 egui::ScrollArea::both() // Changed to both() for horizontal scrolling
                     .id_source("editor_scroll")
                     .show(ui, |ui| {

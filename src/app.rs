@@ -1,7 +1,7 @@
 use crate::ui;
 use eframe::egui;
+use ignore::WalkBuilder;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -21,6 +21,12 @@ pub struct SublimeRustApp {
     pub find_active: bool,
     pub find_just_activated: bool,
     pub find_scroll_requested: bool,
+    pub find_in_files_active: bool,
+    pub find_in_files_find_query: String,
+    pub find_in_files_where_query: String,
+    pub find_in_files_replace_query: String,
+    pub find_in_files_respect_gitignore: bool,
+    pub find_in_files_results: Option<String>,
 }
 
 impl Default for SublimeRustApp {
@@ -41,6 +47,12 @@ impl Default for SublimeRustApp {
             find_active: false,
             find_just_activated: false,
             find_scroll_requested: false,
+            find_in_files_active: false,
+            find_in_files_find_query: String::new(),
+            find_in_files_where_query: String::new(),
+            find_in_files_replace_query: String::new(),
+            find_in_files_respect_gitignore: true,
+            find_in_files_results: None,
         }
     }
 }
@@ -121,6 +133,101 @@ impl SublimeRustApp {
                 }
             }
         }
+    }
+
+    pub fn perform_find_in_files(&mut self) {
+        if self.find_in_files_find_query.is_empty() {
+            self.find_in_files_results = None;
+            return;
+        }
+
+        let mut results = String::new();
+        let mut matches_count = 0;
+        let mut files_count = 0;
+
+        let walker = WalkBuilder::new(&self.find_in_files_where_query)
+            .git_ignore(self.find_in_files_respect_gitignore)
+            .build();
+
+        for result in walker {
+            if let Ok(entry) = result {
+                if entry.file_type().map_or(false, |ft| ft.is_file()) {
+                    if let Ok(content) = fs::read_to_string(entry.path()) {
+                        let mut file_has_match = false;
+                        for (line_num, line) in content.lines().enumerate() {
+                            if line.contains(&self.find_in_files_find_query) {
+                                if !file_has_match {
+                                    results.push_str(&format!("\n{}:\n", entry.path().display()));
+                                    file_has_match = true;
+                                    files_count += 1;
+                                }
+                                results.push_str(&format!(
+                                    "  {}: {}\n",
+                                    line_num + 1,
+                                    line.trim()
+                                ));
+                                matches_count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let results_tab = PathBuf::from(format!(
+            "find://Searching {} files for {}",
+            files_count, self.find_in_files_find_query
+        ));
+
+        results.push_str(&format!(
+            "\n{} matches found in {} files.",
+            matches_count, files_count
+        ));
+        self.find_in_files_results = Some(results.clone());
+        self.tab_contents.insert(results_tab.clone(), results);
+
+        if !self.open_tabs.contains(&results_tab) {
+            self.open_tabs.push(results_tab.clone());
+        }
+        self.active_tab_index = self
+            .open_tabs
+            .iter()
+            .position(|p| p == &results_tab);
+    }
+
+    pub fn perform_replace_in_files(&mut self) {
+        if self.find_in_files_find_query.is_empty() {
+            return;
+        }
+
+        let walker = WalkBuilder::new(&self.find_in_files_where_query)
+            .git_ignore(self.find_in_files_respect_gitignore)
+            .build();
+
+        for result in walker {
+            if let Ok(entry) = result {
+                if entry.file_type().map_or(false, |ft| ft.is_file()) {
+                    if let Ok(mut content) = fs::read_to_string(entry.path()) {
+                        if content.contains(&self.find_in_files_find_query) {
+                            content = content.replace(
+                                &self.find_in_files_find_query,
+                                &self.find_in_files_replace_query,
+                            );
+                            if fs::write(entry.path(), content).is_ok() {
+                                // Also update the content if the file is open in a tab
+                                if self.tab_contents.contains_key(entry.path()) {
+                                    if let Ok(new_content) = fs::read_to_string(entry.path()) {
+                                        self.tab_contents
+                                            .insert(entry.path().to_path_buf(), new_content);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.perform_find_in_files();
     }
 
     pub fn move_to_match(&mut self, ctx: &egui::Context) {
@@ -232,6 +339,19 @@ impl eframe::App for SublimeRustApp {
         }) {
             self.find_active = true;
             self.find_just_activated = true;
+        }
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Key::F,
+            ))
+        }) {
+            self.find_in_files_active = !self.find_in_files_active;
+            if self.find_in_files_active {
+                if let Some(dir) = &self.current_dir {
+                    self.find_in_files_where_query = dir.to_str().unwrap_or("").to_string();
+                }
+            }
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(

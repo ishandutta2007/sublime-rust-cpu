@@ -14,7 +14,38 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             }
             ui.separator();
 
-            if app.find_active {
+            if app.find_in_files_active {
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Find:    ");
+                        ui.add(egui::TextEdit::singleline(
+                            &mut app.find_in_files_find_query,
+                        ));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Where:   ");
+                        ui.add(egui::TextEdit::singleline(
+                            &mut app.find_in_files_where_query,
+                        ));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Replace:");
+                        ui.add(egui::TextEdit::singleline(
+                            &mut app.find_in_files_replace_query,
+                        ));
+                    });
+                });
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Replace").clicked() {
+                        app.perform_replace_in_files();
+                    }
+                    if ui.button("Find").clicked() {
+                        app.perform_find_in_files();
+                    }
+                    ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
+                });
+            } else if app.find_active {
                 ui.label("Find:");
                 let find_id = ui.make_persistent_id("find_input");
                 let remaining_width = ui.available_width() - icon_button_width * 9.0;
@@ -32,14 +63,6 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 if response.changed() {
                     app.perform_find();
                 }
-
-                // if response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                //     if !app.find_matches.is_empty() {
-                //         let next_idx = (app.current_match_index.unwrap_or(0) + 1) % app.find_matches.len();
-                //         app.current_match_index = Some(next_idx);
-                //         app.move_to_match(ctx);
-                //     }
-                // }
 
                 if !app.find_matches.is_empty() {
                     let curr = app.current_match_index.unwrap_or(0) + 1;
@@ -66,14 +89,14 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 if let Some(idx) = app.active_tab_index {
                     if let Some(path) = app.open_tabs.get(idx) {
                         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                        let syntax = SYNTAX_SET
-                            .find_syntax_by_extension(extension)
-                            .or_else(|| SYNTAX_SET.find_syntax_by_first_line(extension)) // fallback
-                            .map(|s| s.name.as_str())
-                            .unwrap_or("Plain Text");
-                        ui.label(format!("Language: {}", syntax));
-                        // ui.separator();
-                        // ui.label(format!("Line {}, Col {}", app.cursor_pos.0, app.cursor_pos.1));
+                        if extension != "find-results" {
+                            let syntax = SYNTAX_SET
+                                .find_syntax_by_extension(extension)
+                                .or_else(|| SYNTAX_SET.find_syntax_by_first_line(extension)) // fallback
+                                .map(|s| s.name.as_str())
+                                .unwrap_or("Plain Text");
+                            ui.label(format!("Language: {}", syntax));
+                        }
                     }
                 } else {
                     ui.label("No file");
