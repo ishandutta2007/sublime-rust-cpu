@@ -15,35 +15,44 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             ui.separator();
 
             if app.find_in_files_active {
+                let remaining_width = ui.available_width() - icon_button_width * 15.0;
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label("Find:    ");
+                        ui.label("Find  :    ");
                         ui.add(egui::TextEdit::singleline(
                             &mut app.find_in_files_find_query,
-                        ));
+                        )
+                        .desired_width(remaining_width)
+                        );
                     });
                     ui.horizontal(|ui| {
-                        ui.label("Where:   ");
+                        ui.label("Where:  ");
                         ui.add(egui::TextEdit::singleline(
                             &mut app.find_in_files_where_query,
-                        ));
+                        )
+                        .desired_width(remaining_width)
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label("Replace:");
                         ui.add(egui::TextEdit::singleline(
                             &mut app.find_in_files_replace_query,
-                        ));
+                        )
+                        .desired_width(remaining_width)
+                        );
                     });
                 });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Replace").clicked() {
-                        app.perform_replace_in_files();
-                    }
-                    if ui.button("Find").clicked() {
-                        app.perform_find_in_files();
-                    }
-                    ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
+                    ui.vertical(|ui| {
+                        if ui.button(" Find ").clicked() {
+                            app.perform_find_in_files();
+                        }
+                        if ui.button("Replace").clicked() {
+                            app.perform_replace_in_files();
+                        }
+                        ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
+                    });
                 });
             } else if app.find_active {
                 ui.label("Find:");
