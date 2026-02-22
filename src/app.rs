@@ -317,7 +317,7 @@ impl eframe::App for SublimeRustApp {
         // Handle shortcuts
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND,
+                egui::Modifiers::CTRL,
                 egui::Key::S,
             ))
         }) {
@@ -325,7 +325,7 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
                 egui::Key::S,
             ))
         }) {
@@ -333,7 +333,7 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND,
+                egui::Modifiers::CTRL,
                 egui::Key::F,
             ))
         }) {
@@ -342,7 +342,7 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
                 egui::Key::F,
             ))
         }) {
@@ -355,7 +355,7 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND,
+                egui::Modifiers::CTRL,
                 egui::Key::O,
             ))
         }) {
@@ -363,7 +363,7 @@ impl eframe::App for SublimeRustApp {
         }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
-                egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
                 egui::Key::O,
             ))
         }) {

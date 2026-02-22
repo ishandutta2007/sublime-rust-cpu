@@ -68,6 +68,15 @@ pub fn render_menu_bar(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     app.find_just_activated = true;
                     ui.close_menu();
                 }
+                if ui.button("Find in Files... (Ctrl+Shift+F)").clicked() {
+                    app.find_in_files_active = !app.find_in_files_active;
+                    if app.find_in_files_active {
+                        if let Some(dir) = &app.current_dir {
+                            app.find_in_files_where_query = dir.to_str().unwrap_or("").to_string();
+                        }
+                    }
+                    ui.close_menu();
+                }
             });
 
             ui.menu_button("View", |ui| {
