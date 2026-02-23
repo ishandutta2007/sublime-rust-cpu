@@ -65,7 +65,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                             app.perform_replace_in_files();
                         }
 
-                        if ui.button("g")
+                        if ui.selectable_label(app.find_in_files_respect_gitignore,"g")
                             .on_hover_text("Respect .gitignore")
                             .clicked()
                         {
