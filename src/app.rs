@@ -80,7 +80,8 @@ impl SublimeRustApp {
 
     pub fn open_folder(&mut self) {
         if let Some(path) = rfd::FileDialog::new().pick_folder() {
-            self.current_dir = Some(path);
+            self.current_dir = Some(path.clone());
+            self.expanded_dirs.insert(path);
         }
     }
 
