@@ -80,7 +80,18 @@ pub fn render_menu_bar(app: &mut SublimeRustApp, ctx: &egui::Context) {
             });
 
             ui.menu_button("View", |ui| {
-                ui.menu_button("Side Bar", |_| {});
+                ui.menu_button("Side Bar", |ui| {
+                    if app.sidebar_visible {
+                        if ui.menu_button("Hide", |_| {}).response.clicked() {
+                            app.sidebar_visible = !app.sidebar_visible;
+                        }
+                    }
+                    else {
+                        if ui.menu_button("Show", |_| {}).response.clicked() {
+                            app.sidebar_visible = !app.sidebar_visible;
+                        }
+                    }
+                });
             });
 
             ui.menu_button("Goto", |ui| {
