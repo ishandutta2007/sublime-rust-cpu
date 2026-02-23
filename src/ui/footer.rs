@@ -43,28 +43,38 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     });
                 });
 
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.horizontal(|ui| {
-                        ui.vertical(|ui| {
-                            if ui.button(" Find ").clicked() {
-                                app.perform_find_in_files();
-                            }
-                            if ui.button("Replace").clicked() {
-                                app.perform_replace_in_files();
-                            }
-                        });
+                egui::Grid::new("find_buttons_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 4.0])
+                    .show(ui, |ui| {
 
-                        ui.vertical(|ui| {
-                            if ui.button("x").on_hover_text("Close Find").clicked() {
-                                app.find_active = false;
-                            }
-                            if ui.button("g").on_hover_text("Respect .gitignore").clicked() {
-                                app.find_in_files_respect_gitignore = !app.find_in_files_respect_gitignore;
-                            }
-                            // ui.checkbox(&mut app.find_in_files_respect_gitignore, "Respect .gitignore");
-                        });
+                        if ui.button(" Find ").clicked() {
+                            app.perform_find_in_files();
+                        }
+
+                        if ui.button("x")
+                            .on_hover_text("Close Find")
+                            .clicked()
+                        {
+                            app.find_active = false;
+                        }
+
+                        ui.end_row();
+
+                        if ui.button("Replace").clicked() {
+                            app.perform_replace_in_files();
+                        }
+
+                        if ui.button("g")
+                            .on_hover_text("Respect .gitignore")
+                            .clicked()
+                        {
+                            app.find_in_files_respect_gitignore =
+                                !app.find_in_files_respect_gitignore;
+                        }
+
+                        ui.end_row();
                     });
-                });
             } else if app.find_active {
                 ui.label("Find:");
                 let find_id = ui.make_persistent_id("find_input");
