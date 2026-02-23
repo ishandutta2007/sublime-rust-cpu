@@ -33,7 +33,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             ui.separator();
 
             if app.find_in_files_active {
-                let remaining_width = ui.available_width() - icon_button_width * 15.0;
+                let remaining_width = ui.available_width() - icon_button_width * 13.0;
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
                         ui.label("Find :  ");
@@ -66,7 +66,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                             app.perform_find_in_files();
                         }
 
-                        if ui.button("x").on_hover_text("Close Find").clicked() {
+                        if ui.button("x").on_hover_text("Close(Esc)").clicked() {
                             app.find_active = false;
                         }
 
@@ -91,7 +91,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
             } else if app.find_active {
                 ui.label("Find:");
                 let find_id = ui.make_persistent_id("find_input");
-                let remaining_width = ui.available_width() - icon_button_width * 9.0;
+                let remaining_width = ui.available_width() - icon_button_width * 13.0;
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut app.find_query)
                         .id(find_id)
@@ -114,7 +114,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     ui.label("No matches");
                 }
 
-                if ui.button("x").on_hover_text("Close Find").clicked() {
+                if ui.button("x").on_hover_text("Close(Esc)").clicked() {
                     app.find_active = false;
                 }
             } else {
