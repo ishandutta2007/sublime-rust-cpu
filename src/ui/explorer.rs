@@ -11,7 +11,19 @@ pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path
 
     let is_expanded = app.expanded_dirs.contains(&path);
 
-    let response = egui::CollapsingHeader::new(&dir_name)
+    let is_ignored = if let Some(gitignore) = &app.gitignore {
+        gitignore.matched(&path, true).is_ignore()
+    } else {
+        false
+    };
+
+    let text_color = if is_ignored {
+        egui::Color32::from_gray(100)
+    } else {
+        egui::Color32::from_rgb(0xcc, 0xcc, 0xcc)
+    };
+
+    let response = egui::CollapsingHeader::new(egui::RichText::new(&dir_name).color(text_color))
         .id_source(&path)
         .open(Some(is_expanded))
         .show(ui, |ui| {
@@ -30,8 +42,21 @@ pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path
                 for entry in sorted_entries {
                     let entry_path = entry.path();
                     let file_name = entry.file_name().to_str().unwrap_or("?").to_string();
+                    let is_dir = entry_path.is_dir();
 
-                    if entry_path.is_dir() {
+                    let is_entry_ignored = if let Some(gitignore) = &app.gitignore {
+                        gitignore.matched(&entry_path, is_dir).is_ignore()
+                    } else {
+                        false
+                    };
+
+                    let entry_text_color = if is_entry_ignored {
+                        egui::Color32::from_gray(100)
+                    } else {
+                        egui::Color32::from_rgb(0xcc, 0xcc, 0xcc)
+                    };
+
+                    if is_dir {
                         render_project_explorer(app, ui, entry_path);
                     } else {
                         // File entry
@@ -44,8 +69,11 @@ pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path
 
                         if ui
                             .add(
-                                egui::Label::new(format!("  {}", display_name))
-                                    .sense(egui::Sense::click()),
+                                egui::Label::new(
+                                    egui::RichText::new(format!("  {}", display_name))
+                                        .color(entry_text_color),
+                                )
+                                .sense(egui::Sense::click()),
                             )
                             .clicked()
                         {

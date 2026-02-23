@@ -1,5 +1,6 @@
 use crate::ui;
 use eframe::egui;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use ignore::WalkBuilder;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -27,6 +28,7 @@ pub struct SublimeRustApp {
     pub find_in_files_replace_query: String,
     pub find_in_files_respect_gitignore: bool,
     pub find_in_files_results: Option<String>,
+    pub gitignore: Option<Gitignore>,
 }
 
 impl Default for SublimeRustApp {
@@ -53,6 +55,7 @@ impl Default for SublimeRustApp {
             find_in_files_replace_query: String::new(),
             find_in_files_respect_gitignore: true,
             find_in_files_results: None,
+            gitignore: None,
         }
     }
 }
@@ -81,7 +84,15 @@ impl SublimeRustApp {
     pub fn open_folder(&mut self) {
         if let Some(path) = rfd::FileDialog::new().pick_folder() {
             self.current_dir = Some(path.clone());
-            self.expanded_dirs.insert(path);
+            self.expanded_dirs.insert(path.clone());
+
+            // Load gitignore
+            let mut builder = GitignoreBuilder::new(&path);
+            let gitignore_path = path.join(".gitignore");
+            if gitignore_path.exists() {
+                builder.add(gitignore_path);
+            }
+            self.gitignore = Some(builder.build().unwrap());
         }
     }
 
@@ -90,7 +101,17 @@ impl SublimeRustApp {
             if self.current_dir.is_none() {
                 // If no folder is open, set the parent of the file as the current directory
                 if let Some(parent) = path.parent() {
-                    self.current_dir = Some(parent.to_path_buf());
+                    let parent_path = parent.to_path_buf();
+                    self.current_dir = Some(parent_path.clone());
+                    self.expanded_dirs.insert(parent_path.clone());
+
+                    // Load gitignore
+                    let mut builder = GitignoreBuilder::new(&parent_path);
+                    let gitignore_path = parent_path.join(".gitignore");
+                    if gitignore_path.exists() {
+                        builder.add(gitignore_path);
+                    }
+                    self.gitignore = Some(builder.build().unwrap());
                 }
             }
             if let Ok(content) = fs::read_to_string(&path) {
