@@ -113,7 +113,8 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
                     .id_source("editor_scroll")
                     .show(ui, |ui| {
                         // Handle PageUp/PageDown for scrolling
-                        let is_focused = ui.memory(|mem| mem.has_focus(egui::Id::new("main_editor")));
+                        let is_focused =
+                            ui.memory(|mem| mem.has_focus(egui::Id::new("main_editor")));
                         if is_focused {
                             let page_height = ui.available_height();
                             if ui.input(|i| i.key_pressed(egui::Key::PageUp)) {

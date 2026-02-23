@@ -8,12 +8,10 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
 
     fonts.font_data.insert(
         "unicode_font".to_owned(),
-        FontData::from_static(include_bytes!(
-            concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/assets/JetBrainsMonoNerdFont-Regular.ttf"
-            )
-        )),
+        FontData::from_static(include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/JetBrainsMonoNerdFont-Regular.ttf"
+        ))),
     );
     fonts
         .families
@@ -39,26 +37,23 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
                         ui.label("Find :  ");
-                        ui.add(egui::TextEdit::singleline(
-                            &mut app.find_in_files_find_query,
-                        )
-                        .desired_width(remaining_width)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut app.find_in_files_find_query)
+                                .desired_width(remaining_width),
                         );
                     });
                     ui.horizontal(|ui| {
                         ui.label("Where:  ");
-                        ui.add(egui::TextEdit::singleline(
-                            &mut app.find_in_files_where_query,
-                        )
-                        .desired_width(remaining_width)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut app.find_in_files_where_query)
+                                .desired_width(remaining_width),
                         );
                     });
                     ui.horizontal(|ui| {
                         ui.label("Replace:");
-                        ui.add(egui::TextEdit::singleline(
-                            &mut app.find_in_files_replace_query,
-                        )
-                        .desired_width(remaining_width)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut app.find_in_files_replace_query)
+                                .desired_width(remaining_width),
                         );
                     });
                 });
@@ -67,15 +62,11 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     .num_columns(2)
                     .spacing([8.0, 4.0])
                     .show(ui, |ui| {
-
                         if ui.button("Search ").clicked() {
                             app.perform_find_in_files();
                         }
 
-                        if ui.button("x")
-                            .on_hover_text("Close Find")
-                            .clicked()
-                        {
+                        if ui.button("x").on_hover_text("Close Find").clicked() {
                             app.find_active = false;
                         }
 
@@ -84,9 +75,10 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                         if ui.button("Replace").clicked() {
                             app.perform_replace_in_files();
                         }
-                        
+
                         //code for gitignore here: https://www.nerdfonts.com/cheat-sheet ie \ue725
-                        if ui.selectable_label(app.find_in_files_respect_gitignore,"")
+                        if ui
+                            .selectable_label(app.find_in_files_respect_gitignore, "")
                             .on_hover_text("Respect .gitignore")
                             .clicked()
                         {

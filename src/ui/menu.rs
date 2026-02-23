@@ -81,11 +81,7 @@ pub fn render_menu_bar(app: &mut SublimeRustApp, ctx: &egui::Context) {
 
             ui.menu_button("View", |ui| {
                 ui.menu_button("Side Bar", |ui| {
-                    let label = if app.sidebar_visible {
-                        "Hide"
-                    } else {
-                        "Show"
-                    };
+                    let label = if app.sidebar_visible { "Hide" } else { "Show" };
                     if ui.button(label).clicked() {
                         app.sidebar_visible = !app.sidebar_visible;
                         ui.close_menu();

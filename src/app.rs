@@ -162,11 +162,7 @@ impl SublimeRustApp {
                                     file_has_match = true;
                                     files_count += 1;
                                 }
-                                results.push_str(&format!(
-                                    "  {}: {}\n",
-                                    line_num + 1,
-                                    line.trim()
-                                ));
+                                results.push_str(&format!("  {}: {}\n", line_num + 1, line.trim()));
                                 matches_count += 1;
                             }
                         }
@@ -190,10 +186,7 @@ impl SublimeRustApp {
         if !self.open_tabs.contains(&results_tab) {
             self.open_tabs.push(results_tab.clone());
         }
-        self.active_tab_index = self
-            .open_tabs
-            .iter()
-            .position(|p| p == &results_tab);
+        self.active_tab_index = self.open_tabs.iter().position(|p| p == &results_tab);
     }
 
     pub fn perform_replace_in_files(&mut self) {
@@ -338,14 +331,13 @@ impl eframe::App for SublimeRustApp {
                 egui::Key::F,
             ))
         }) {
-            self.find_in_files_active = true;// !self.find_in_files_active;
+            self.find_in_files_active = true; // !self.find_in_files_active;
             if self.find_in_files_active {
                 if let Some(dir) = &self.current_dir {
                     self.find_in_files_where_query = dir.to_str().unwrap_or("").to_string();
                 }
             }
-        }
-        else if ctx.input_mut(|i| {
+        } else if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
                 egui::Modifiers::CTRL,
                 egui::Key::F,
