@@ -42,6 +42,18 @@ pub fn render_project_explorer(app: &mut SublimeRustApp, ui: &mut egui::Ui, path
                 for entry in sorted_entries {
                     let entry_path = entry.path();
                     let file_name = entry.file_name().to_str().unwrap_or("?").to_string();
+
+                    // Check for Windows hidden attribute
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::fs::MetadataExt;
+                        if let Ok(metadata) = entry.metadata() {
+                            if metadata.file_attributes() & 0x2 != 0 {
+                                continue;
+                            }
+                        }
+                    }
+
                     let is_dir = entry_path.is_dir();
 
                     let is_entry_ignored = if let Some(gitignore) = &app.gitignore {
