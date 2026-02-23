@@ -1,8 +1,28 @@
 use crate::app::SublimeRustApp;
 use crate::syntax::SYNTAX_SET;
 use eframe::egui;
+use egui::{FontData, FontDefinitions, FontFamily};
 
 pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
+    let mut fonts = FontDefinitions::default();
+
+    fonts.font_data.insert(
+        "unicode_font".to_owned(),
+        FontData::from_static(include_bytes!(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/assets/JetBrainsMonoNerdFont-Regular.ttf"
+            )
+        )),
+    );
+    fonts
+        .families
+        .entry(FontFamily::Proportional)
+        .or_default()
+        .insert(0, "unicode_font".to_owned());
+
+    ctx.set_fonts(fonts);
+
     egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
         ui.add_space(3.0);
         ui.horizontal(|ui| {
@@ -18,7 +38,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                 let remaining_width = ui.available_width() - icon_button_width * 15.0;
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label("Find  :    ");
+                        ui.label("Find :  ");
                         ui.add(egui::TextEdit::singleline(
                             &mut app.find_in_files_find_query,
                         )
@@ -48,7 +68,7 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                     .spacing([8.0, 4.0])
                     .show(ui, |ui| {
 
-                        if ui.button(" Find ").clicked() {
+                        if ui.button("Search ").clicked() {
                             app.perform_find_in_files();
                         }
 
@@ -64,8 +84,9 @@ pub fn render_footer(app: &mut SublimeRustApp, ctx: &egui::Context) {
                         if ui.button("Replace").clicked() {
                             app.perform_replace_in_files();
                         }
-
-                        if ui.selectable_label(app.find_in_files_respect_gitignore,"g")
+                        
+                        //code for gitignore here: https://www.nerdfonts.com/cheat-sheet ie \ue725
+                        if ui.selectable_label(app.find_in_files_respect_gitignore,"")
                             .on_hover_text("Respect .gitignore")
                             .clicked()
                         {
