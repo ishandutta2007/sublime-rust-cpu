@@ -314,16 +314,6 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Debug: Print all key presses
-        ctx.input(|i| {
-            for event in &i.events {
-                if let egui::Event::Key { key, pressed, modifiers, .. } = event {
-                    if *pressed {
-                        // println!("Key pressed: {:?}, Modifiers: {:?}", key, modifiers);
-                    }
-                }
-            }
-        });
         // Handle shortcuts
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
