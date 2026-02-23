@@ -84,6 +84,15 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
                 egui::ScrollArea::both()
                     .id_source("find_results_scroll")
                     .show(ui, |ui| {
+                        // Handle PageUp/PageDown for scrolling
+                        let page_height = ui.available_height();
+                        if ui.input(|i| i.key_pressed(egui::Key::PageUp)) {
+                            ui.scroll_with_delta(egui::vec2(0.0, page_height));
+                        }
+                        if ui.input(|i| i.key_pressed(egui::Key::PageDown)) {
+                            ui.scroll_with_delta(egui::vec2(0.0, -page_height));
+                        }
+
                         let title = path.to_str().unwrap_or("").replace("find://", "");
                         ui.label(
                             egui::RichText::new(title)
@@ -103,6 +112,18 @@ pub fn render_editor_pane(app: &mut SublimeRustApp, ui: &mut egui::Ui) {
                 egui::ScrollArea::both() // Changed to both() for horizontal scrolling
                     .id_source("editor_scroll")
                     .show(ui, |ui| {
+                        // Handle PageUp/PageDown for scrolling
+                        let is_focused = ui.memory(|mem| mem.has_focus(egui::Id::new("main_editor")));
+                        if is_focused {
+                            let page_height = ui.available_height();
+                            if ui.input(|i| i.key_pressed(egui::Key::PageUp)) {
+                                ui.scroll_with_delta(egui::vec2(0.0, page_height));
+                            }
+                            if ui.input(|i| i.key_pressed(egui::Key::PageDown)) {
+                                ui.scroll_with_delta(egui::vec2(0.0, -page_height));
+                            }
+                        }
+
                         ui.horizontal_top(|ui| {
                             let line_count = content.chars().filter(|&c| c == '\n').count() + 1;
                             let mut line_numbers = String::new();
