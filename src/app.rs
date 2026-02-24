@@ -329,6 +329,17 @@ impl SublimeRustApp {
 
 impl eframe::App for SublimeRustApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set the window title
+        let mut title = "SuRuC".to_string();
+        if let Some(idx) = self.active_tab_index {
+            if let Some(path) = self.open_tabs.get(idx) {
+                if let Some(path_str) = path.to_str() {
+                    title = format!("{} - {}", title, path_str);
+                }
+            }
+        }
+        ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
+
         // Handle shortcuts
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
