@@ -29,6 +29,7 @@ pub struct SublimeRustApp {
     pub find_in_files_respect_gitignore: bool,
     pub find_in_files_results: Option<String>,
     pub gitignore: Option<Gitignore>,
+    pub untitled_counter: usize,
 }
 
 impl Default for SublimeRustApp {
@@ -56,6 +57,7 @@ impl Default for SublimeRustApp {
             find_in_files_respect_gitignore: true,
             find_in_files_results: None,
             gitignore: None,
+            untitled_counter: 0,
         }
     }
 }
@@ -79,6 +81,15 @@ impl SublimeRustApp {
         cc.egui_ctx.set_visuals(visuals);
 
         Self::default()
+    }
+
+    pub fn new_file(&mut self) {
+        self.untitled_counter += 1;
+        let new_path = PathBuf::from(format!("Untitled-{}", self.untitled_counter));
+        self.tab_contents.insert(new_path.clone(), String::new());
+        self.open_tabs.push(new_path.clone());
+        self.active_tab_index = Some(self.open_tabs.len() - 1);
+        self.dirty_files.insert(new_path);
     }
 
     pub fn open_folder(&mut self) {
@@ -341,6 +352,14 @@ impl eframe::App for SublimeRustApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
 
         // Handle shortcuts
+        if ctx.input_mut(|i| {
+            i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::CTRL,
+                egui::Key::N,
+            ))
+        }) {
+            self.new_file();
+        }
         if ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(
                 egui::Modifiers::CTRL,

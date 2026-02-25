@@ -6,6 +6,7 @@ pub fn render_menu_bar(app: &mut SublimeRustApp, ctx: &egui::Context) {
         egui::menu::bar(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("New File (Ctrl+N)").clicked() {
+                    app.new_file();
                     ui.close_menu();
                 }
                 ui.separator();
